@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>SENTINEL Virtual Lab</title>
+<link rel="stylesheet" href="style.css"></head><body>
+<header><h1>SENTINEL VIRTUAL LAB<small>Maritime &amp; Disaster Safety Wristband · digital prototype · SIMULATED DATA</small></h1>
+<div style="display:flex;gap:10px;align-items:center"><span class="mono">SIM T+<span id="clk">0</span>s</span>
+<select id="speed"><option value="1">1×</option><option value="5">5×</option><option value="30">30×</option><option value="120">120×</option></select>
+<button id="run">⏸ Pause</button><button id="theme">◐</button><span class="pill" id="hdrState">SAFE</span></div></header>
+<main>
+<section class="w"><h2>[ INTERNAL CONNECTIONS ] · live data flow between components</h2>
+<svg id="flow" viewBox="0 0 920 285" width="100%"></svg>
+<div class="scroll"><table><thead><tr><th>From</th><th>To</th><th>Interface</th><th>Data shared</th><th>Live value</th></tr></thead><tbody id="wire"></tbody></table></div></section>
+<section><h2>[ SENSOR SIMULATOR ] · wristband</h2>
+<label>HR (bpm)<input type="range" id="hr" min="40" max="180"><input type="number" id="hrn" min="40" max="180"></label>
+<label>SpO₂ (%)<input type="range" id="sp" min="75" max="100"><input type="number" id="spn" min="75" max="100"></label>
+<label>Vitals mode<select id="hrMode"><option>NORMAL</option><option>RANDOM</option><option>ABNORMAL</option></select></label>
+<label>Motion (BNO055)<select id="motion"><option>NORMAL</option><option>WALKING</option><option>RUNNING</option><option>FALL</option><option>NO_MOVEMENT</option><option>ABNORMAL_MOTION</option></select></label>
+<label>Fall detected<input type="checkbox" id="fall"></label>
+<label>Water sensor<select id="water"><option>DRY</option><option>WATER_DETECTED</option><option>IMMERSION</option></select></label>
+<label>SOS button<button id="sos">NORMAL</button></label>
+<label>Battery (%)<input type="range" id="bt" min="0" max="100"><input type="number" id="btn" min="0" max="100"></label>
+<div class="kv mono" style="margin-top:8px"><span>Accel g (x,y,z)</span><b id="acc"></b><span>Gyro °/s</span><b id="gyr"></b><span>Orientation</span><b id="ori"></b></div>
+<svg id="axes" viewBox="0 0 300 50" width="100%" height="50"></svg></section>
+
+<section><h2>[ SENSOR FUSION ] + [ EMERGENCY ENGINE ]</h2>
+<div class="kv"><span>Current state</span><b id="fs">–</b><span>Display label</span><b id="fl">–</b><span>Previous state</span><b id="fp">–</b><span>Severity (0-3)</span><b id="fv">–</b><span>Transition at</span><b id="ft">–</b></div>
+<p><b>Reason:</b> <span id="fr"></span></p><p class="mono"><b>Evidence:</b> <span id="fe"></span></p>
+<h2 style="margin-top:12px">Thresholds (configurable)</h2><div id="cfgFus"></div>
+<label>Fall alone →<select id="fallAlone"><option>ALERT</option><option>EMERGENCY</option></select></label>
+<p class="mono" style="color:var(--mut)">R1 SOS→EMG · R2 Immersion+Fall→EMG · R3 Fall+Still+AbnVitals→EMG · R4 Immersion+Still→ALERT(high) · R5 HighHR+Active→MONITOR · R6 SpO₂low+AbnMotion→ALERT · R7 Depth≥deep+Still→EMG (barometer)</p></section>
+
+<section><h2>[ BLE COMMUNICATION ]</h2>
+<div class="kv"><span>Link</span><b id="bl">–</b><span>TX / RX / LOST</span><b id="bc">–</b></div>
+<label>Packet loss %<input type="range" id="loss" min="0" max="100" value="0"><span id="lossv" class="mono">0</span></label>
+<div class="btns"><button id="bdis">Disconnect</button><button id="bcon">Connect</button></div>
+<p class="mono">Last TX packet:</p><div class="mono" id="ptx" style="word-break:break-all"></div>
+<div class="scroll" style="max-height:140px"><table><tbody id="blog"></tbody></table></div></section>
+
+<section><h2>[ BOAT HUB ] · ESP32 gateway<span class="tag">SIMULATED</span></h2>
+<div class="kv"><span>BME280 temp</span><b id="bt1"></b><span>Pressure</span><b id="bt2"></b><span>Humidity</span><b id="bt3"></b>
+<span>GNSS lat / lon</span><b id="g1"></b><span>Alt / speed</span><b id="g2"></b><span>Sats / fix</span><b id="g3"></b></div>
+<p class="mono">Combined emergency packet (wrist + boat + location):</p><div class="mono" id="hubpk" style="word-break:break-all"></div></section>
+
+<section><h2>[ BATTERY ] · low-power model<span class="tag">SIMULATED POWER CONSUMPTION</span></h2>
+<div class="kv"><span>Charge</span><b id="pb"></b><span>Voltage</span><b id="pv"></b><span>Current</span><b id="pi"></b><span>Power mode</span><b id="pm"></b><span>Est. runtime</span><b id="pr"></b><span>Warning</span><b id="pw"></b></div>
+<div id="cfgPow" style="margin-top:6px"></div></section>
+
+<section><h2>[ BAROMETRIC SENSOR ] · BMP/BME280<span class="tag">SIMULATED</span></h2>
+<label>Wrist depth (cm)<input type="range" id="dp" min="0" max="200"><input type="number" id="dpn" min="0" max="200"></label>
+<label>Storm trend (boat)<select id="storm"><option>STEADY</option><option>FALLING</option><option>RAPID</option></select></label>
+<label>Boat pressure (hPa)<input type="number" id="bpn" step="0.1" min="900" max="1100"></label>
+<div class="kv"><span>Wrist pressure</span><b id="wp"></b><span>Boat pressure</span><b id="bp2"></b><span>Δ pressure</span><b id="dp2"></b><span>Depth estimate</span><b id="de"></b><span>Trend</span><b id="tr"></b><span>Baro altitude</span><b id="ba"></b><span>Status</span><b id="bs"></b></div>
+<p class="mono" style="color:var(--mut)">≈0.098 hPa per cm of water. Wrist barometer cross-checks the water sensor; boat barometer trend warns of storms.</p></section>
+<section class="w"><h2>[ COMMAND CENTER ]</h2><div style="display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(300px,1fr))">
+<div><div id="cc"></div><div class="kv" id="ccv"></div></div>
+<div><svg id="map" viewBox="0 0 320 220" width="100%" style="background:var(--bg);border:1px solid var(--bd);border-radius:6px"></svg></div></div></section>
+
+<section class="w"><h2>[ GRAPHS ] · live</h2><div style="display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(260px,1fr))">
+<div><span class="mono">Heart rate (bpm)</span><canvas id="c0"></canvas></div><div><span class="mono">SpO₂ (%)</span><canvas id="c1"></canvas></div>
+<div><span class="mono">Battery (%)</span><canvas id="c2"></canvas></div><div><span class="mono">Current (mA)</span><canvas id="c3"></canvas></div></div></section>
+
+<section class="w"><h2>[ TEST SCENARIOS ]</h2><div class="btns" id="scn"></div><p class="mono" id="scnx"></p>
+<div class="btns" style="margin-top:8px"><button id="runT">▶ Run automated validation</button><span class="tag" id="qa">–</span><span class="mono" style="color:var(--mut)">QA re-runs automatically when you change a threshold</span></div>
+<div class="scroll"><table><thead><tr><th>Test</th><th>Input</th><th>Expected</th><th>Actual</th><th>Result</th></tr></thead><tbody id="tt"></tbody></table></div></section>
+
+<section class="w"><h2>[ DATA LOG ]</h2><div class="btns"><button id="lclr">Clear</button><button id="lcsv">Show / copy CSV</button></div>
+<div class="scroll"><table><thead><tr><th>Time</th><th>Dev</th><th>HR</th><th>SpO₂</th><th>Motion</th><th>Fall</th><th>Water</th><th>SOS</th><th>Bat%</th><th>Lat</th><th>Lon</th><th>State</th><th>Reason</th></tr></thead><tbody id="lg"></tbody></table></div>
+<textarea id="csv" hidden></textarea></section>
+
+<section class="w"><h2>[ HARDWARE MIGRATION ]</h2><div class="scroll"><table><thead><tr><th>Virtual component</th><th></th><th>Future physical part</th><th>Embedded note</th></tr></thead><tbody>
+<tr><td>Wristband ESP32 core</td><td>→</td><td>ESP32-WROOM-32</td><td><code>fuse()</code> → C function over a <code>struct Inputs</code>; same thresholds as <code>Config</code></td></tr>
+<tr><td>MAX30102 sim</td><td>→</td><td>MAX30102 (I²C 0x57)</td><td>HR/SpO₂ from PPG; add motion-artifact rejection</td></tr>
+<tr><td>BNO055 sim</td><td>→</td><td>BNO055 (I²C 0x28)</td><td>Fall = free-fall + impact spike; NO_MOVEMENT = low variance window</td></tr>
+<tr><td>Water sensor sim</td><td>→</td><td>Conductive probe / ADC</td><td>Two thresholds: wet vs immersed</td></tr>
+<tr><td>SOS sim</td><td>→</td><td>Push button (GPIO, interrupt)</td><td>Wakes MCU from deep sleep</td></tr>
+<tr><td>Battery / power model</td><td>→</td><td>500 mAh Li-Po + fuel gauge/ADC</td><td>Replace modelled mA with measured values</td></tr>
+<tr><td>Virtual BLE + packet string</td><td>→</td><td>ESP32 BLE (GATT notify)</td><td>Same <code>KEY=VAL;</code> payload; consider binary struct later</td></tr>
+<tr><td>Boat ESP32 gateway</td><td>→</td><td>ESP32-WROOM-32</td><td>BLE central + packet merge</td></tr>
+<tr><td>BME280 sim</td><td>→</td><td>BME280 (I²C)</td><td>Temp / pressure / humidity</td></tr>
+<tr><td>Barometric sensor sim</td><td>→</td><td>BMP390/BMP280 on wristband + BME280 on hub (I²C)</td><td>Wrist–boat Δp ≈ 0.098 hPa/cm depth; boat trend = storm advisory</td></tr>
+<tr><td>GNSS sim</td><td>→</td><td>GNSS module (UART NMEA)</td><td>Simulated coordinates only</td></tr>
+<tr><td>Command center</td><td>→</td><td>Satellite modem → server/dashboard</td><td>Emergency packet is the uplink payload</td></tr>
+<tr><td>(not simulated)</td><td>→</td><td>Vibration motor, LED, PMIC</td><td>Driven by EMERGENCY / ALERT state</td></tr></tbody></table></div></section>
+</main>
+<script src="app.js"></script></body></html>
